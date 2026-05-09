@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+gateway_logs.db
+.env
+*.docx
+windsurf_deployment.yaml
