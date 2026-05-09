@@ -1726,27 +1726,29 @@ if current_page == "Chatbot Demo":
 
     with chat_col:
         st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">USER VIEW</div>""", unsafe_allow_html=True)
-        st.markdown("""
+        msgs_html = ""
+        for msg in st.session_state.demo_chat:
+            if msg["role"] == "assistant":
+                colour = "#ffebee" if msg["text"].startswith(("⛔", "⚠️")) else "#ffffff"
+                msgs_html += f'<div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#222;max-width:88%;box-shadow:0 1px 3px rgba(0,0,0,0.1);line-height:1.5">{msg["text"]}</div>'
+            else:
+                msgs_html += f'<div style="background:#1a237e;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg["text"]}</div>'
+
+        st.markdown(f"""
         <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 28px rgba(0,0,0,0.45);max-width:430px">
             <div style="background:#1a237e;padding:14px 18px;display:flex;align-items:center;gap:12px">
-                <div style="width:44px;height:44px;border-radius:50%;background:#283593;display:flex;align-items:center;justify-content:center;font-size:1.3rem">�</div>
+                <div style="width:44px;height:44px;border-radius:50%;background:#283593;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🤖</div>
                 <div>
                     <div style="color:#fff;font-weight:700;font-size:0.95rem">AI Assistant</div>
                     <div style="color:#c5cae9;font-size:0.73rem">Virtual Support Agent</div>
                 </div>
                 <div style="margin-left:auto;color:#c5cae9;font-size:0.7rem">● Online</div>
             </div>
-            <div style="background:#f4f4f4;padding:14px 14px 8px;min-height:300px;max-height:380px;overflow-y:auto">
+            <div style="background:#f4f4f4;padding:14px 14px 8px;min-height:320px;max-height:420px;overflow-y:auto">
+                {msgs_html}
+            </div>
+        </div>
         """, unsafe_allow_html=True)
-
-        for msg in st.session_state.demo_chat:
-            if msg["role"] == "assistant":
-                colour = "#ffebee" if msg["text"].startswith(("⛔", "⚠️")) else "#ffffff"
-                st.markdown(f"""<div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#222;max-width:88%;box-shadow:0 1px 3px rgba(0,0,0,0.1);line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
-            else:
-                st.markdown(f"""<div style="background:#1a237e;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
-
-        st.markdown("""</div></div>""", unsafe_allow_html=True)
 
         demo_input = st.text_input("", placeholder="Type a message...", key="demo_input", label_visibility="collapsed")
         dc1, dc2 = st.columns([3, 1])
