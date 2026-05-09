@@ -293,7 +293,8 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
             "top_category":       top_cat,
         }
 
-    except Exception:
+    except Exception as _e:
+        print(f"[OpenAI moderation error] {type(_e).__name__}: {_e}")
         return None
 
 
