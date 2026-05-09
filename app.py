@@ -589,7 +589,7 @@ if "custom_patterns" not in st.session_state:
     st.session_state.custom_patterns = []   # list of {pattern, reason, tier}
 if "demo_chat" not in st.session_state:
     st.session_state.demo_chat = [
-        {"role": "assistant", "text": "Welcome to the Shura Council website! I'm Senad, your virtual assistant. How can I help you today?"}
+        {"role": "assistant", "text": "Hello! I'm your AI assistant. How can I help you today?"}
     ]
 if "demo_last_result" not in st.session_state:
     st.session_state.demo_last_result = None
@@ -1702,19 +1702,17 @@ st.markdown("""
 
 def _senad_response(text: str) -> str:
     t = text.lower()
-    if any(w in t for w in ["legislat", "law", "bill", "legal"]):
-        return "The Shura Council plays a key role in the Kingdom's legislative process. Members review and propose legislation in line with the Basic Law of Governance. Would you like to know more about a specific legislative topic?"
-    if any(w in t for w in ["minute", "session", "meeting", "agenda"]):
-        return "Shura Council session minutes are documented and archived for public reference. You can browse records by session number or date. Is there a specific session you are looking for?"
-    if any(w in t for w in ["royal", "speech", "king", "majesty", "his highness"]):
-        return "Royal Speeches delivered at the opening of Shura Council sessions are archived and available for reference. They outline key national priorities and legislative directives."
-    if any(w in t for w in ["women", "child", "family", "gender"]):
-        return "The Shura Council has passed several landmark pieces of legislation related to women's rights, child protection, and family welfare. Would you like me to retrieve specific references?"
-    if any(w in t for w in ["member", "who", "council", "shura"]):
-        return "The Shura Council consists of appointed members who represent diverse sectors of society. Their role is to advise on legislation, review policies, and represent public interest."
-    if any(w in t for w in ["hello", "hi", "hey", "good morning", "good afternoon", "salam", "السلام"]):
-        return "Hello! Welcome to the Shura Council virtual assistant. I can help you with information on legislation, council sessions, royal speeches, and more. What would you like to know?"
-    return "Thank you for your message. I am here to assist you with information about the Shura Council, legislation, and public services. Could you please clarify your question so I can provide the most relevant information?"
+    if any(w in t for w in ["hello", "hi", "hey", "good morning", "good afternoon", "salam"]):
+        return "Hello! How can I assist you today? Feel free to ask me anything."
+    if any(w in t for w in ["help", "support", "assist", "question"]):
+        return "Of course! I'm here to help. Please describe your question or issue and I'll do my best to assist you."
+    if any(w in t for w in ["service", "product", "offer", "information", "info"]):
+        return "We offer a range of services to support our users. Could you let me know what specific information you are looking for?"
+    if any(w in t for w in ["contact", "email", "phone", "reach", "speak"]):
+        return "You can reach our support team through the official contact page. Would you like me to guide you there?"
+    if any(w in t for w in ["thank", "thanks", "appreciate"]):
+        return "You're welcome! Is there anything else I can help you with?"
+    return "Thank you for your message. I'm here to assist you. Could you provide a bit more detail so I can give you the most accurate response?"
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -1722,7 +1720,7 @@ def _senad_response(text: str) -> str:
 # ════════════════════════════════════════════════════════════════════
 if current_page == "Chatbot Demo":
     st.markdown("""<div class="sec-header"><div class="sec-bar"></div><span class="sec-title">Live Chatbot Simulation</span></div>""", unsafe_allow_html=True)
-    st.markdown("""<p style="color:var(--muted);font-size:0.82rem;margin-bottom:18px">Simulates a public user chatting with Senad (Shura Council AI assistant). The security gateway inspects every message before it reaches the AI. The right panel shows what the security team sees in real time.</p>""", unsafe_allow_html=True)
+    st.markdown("""<p style="color:var(--muted);font-size:0.82rem;margin-bottom:18px">Simulates a public user chatting with an AI assistant. The security gateway inspects every message before it reaches the AI. The right panel shows what the security team sees in real time.</p>""", unsafe_allow_html=True)
 
     chat_col, admin_col = st.columns([1.05, 1], gap="large")
 
@@ -1730,13 +1728,13 @@ if current_page == "Chatbot Demo":
         st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">USER VIEW</div>""", unsafe_allow_html=True)
         st.markdown("""
         <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 28px rgba(0,0,0,0.45);max-width:430px">
-            <div style="background:#8B1A1A;padding:14px 18px;display:flex;align-items:center;gap:12px">
-                <div style="width:44px;height:44px;border-radius:50%;background:#a52a2a;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🧑‍💼</div>
+            <div style="background:#1a237e;padding:14px 18px;display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:#283593;display:flex;align-items:center;justify-content:center;font-size:1.3rem">�</div>
                 <div>
-                    <div style="color:#fff;font-weight:700;font-size:0.95rem">Senad</div>
-                    <div style="color:#ffcdd2;font-size:0.73rem">Shura Council</div>
+                    <div style="color:#fff;font-weight:700;font-size:0.95rem">AI Assistant</div>
+                    <div style="color:#c5cae9;font-size:0.73rem">Virtual Support Agent</div>
                 </div>
-                <div style="margin-left:auto;color:#ffcdd2;font-size:0.7rem">● Online</div>
+                <div style="margin-left:auto;color:#c5cae9;font-size:0.7rem">● Online</div>
             </div>
             <div style="background:#f4f4f4;padding:14px 14px 8px;min-height:300px;max-height:380px;overflow-y:auto">
         """, unsafe_allow_html=True)
@@ -1746,23 +1744,31 @@ if current_page == "Chatbot Demo":
                 colour = "#ffebee" if msg["text"].startswith(("⛔", "⚠️")) else "#ffffff"
                 st.markdown(f"""<div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#222;max-width:88%;box-shadow:0 1px 3px rgba(0,0,0,0.1);line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
             else:
-                st.markdown(f"""<div style="background:#8B1A1A;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="background:#1a237e;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
 
         st.markdown("""</div></div>""", unsafe_allow_html=True)
 
-        demo_input = st.text_input("", placeholder="Type a message to Senad...", key="demo_input", label_visibility="collapsed")
+        demo_input = st.text_input("", placeholder="Type a message...", key="demo_input", label_visibility="collapsed")
         dc1, dc2 = st.columns([3, 1])
         with dc1:
             send_clicked = st.button("Send Message", use_container_width=True, key="demo_send")
         with dc2:
             if st.button("Clear", use_container_width=True, key="demo_clear"):
-                st.session_state.demo_chat = [{"role": "assistant", "text": "Welcome to the Shura Council website! I'm Senad, your virtual assistant. How can I help you today?"}]
+                st.session_state.demo_chat = [{"role": "assistant", "text": "Hello! I'm your AI assistant. How can I help you today?"}]
                 st.session_state.demo_last_result = None
                 st.rerun()
 
         if send_clicked and demo_input.strip():
             result = inspect_prompt(demo_input)
-            log_event(demo_input, result)
+            log_event(
+                prompt=demo_input,
+                risk_level=result.risk_level,
+                score=result.score,
+                action=result.action,
+                matched_rules=result.matched_rules,
+                prompt_length=result.prompt_length,
+                tokens_scanned=result.tokens_scanned,
+            )
             st.session_state.session_requests += 1
             if result.risk_level == "HIGH":
                 st.session_state.session_blocked += 1
