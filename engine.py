@@ -261,7 +261,7 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
         response = client.moderations.create(
             input=prompt,
-            model="omni-moderation-latest",
+            model="text-moderation-latest",
         )
         result = response.results[0]
 
@@ -269,8 +269,12 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
             scores = result.category_scores.model_dump()
             categories = result.categories.model_dump()
         except AttributeError:
-            scores = vars(result.category_scores)
-            categories = vars(result.categories)
+            try:
+                scores = dict(vars(result.category_scores))
+                categories = dict(vars(result.categories))
+            except Exception:
+                scores = {}
+                categories = {}
 
         flagged_cats = [k for k, v in categories.items() if v]
         top_cat = max(scores, key=lambda k: scores[k]) if scores else "unknown"
