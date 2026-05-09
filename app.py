@@ -587,6 +587,12 @@ if "rate_limit_hit" not in st.session_state:
     st.session_state.rate_limit_hit = False
 if "custom_patterns" not in st.session_state:
     st.session_state.custom_patterns = []   # list of {pattern, reason, tier}
+if "demo_chat" not in st.session_state:
+    st.session_state.demo_chat = [
+        {"role": "assistant", "text": "Welcome to the Shura Council website! I'm Senad, your virtual assistant. How can I help you today?"}
+    ]
+if "demo_last_result" not in st.session_state:
+    st.session_state.demo_last_result = None
 
 RATE_LIMIT = 10  # max requests per session before throttling
 
@@ -602,7 +608,7 @@ with st.sidebar:
     <div class="sb-section">Navigation</div>
     """, unsafe_allow_html=True)
 
-    for label in ["Home", "Gateway", "Audit Log", "Evaluation", "Pattern Editor", "About"]:
+    for label in ["Home", "Gateway", "Chatbot Demo", "Audit Log", "Evaluation", "Pattern Editor", "About"]:
         if st.button(label, use_container_width=True, key=f"nav_{label}"):
             st.session_state.page = label
             st.rerun()
@@ -1692,3 +1698,129 @@ st.markdown("""
     <span>SQLite Audit Log</span>
 </div>
 """, unsafe_allow_html=True)
+
+
+def _senad_response(text: str) -> str:
+    t = text.lower()
+    if any(w in t for w in ["legislat", "law", "bill", "legal"]):
+        return "The Shura Council plays a key role in the Kingdom's legislative process. Members review and propose legislation in line with the Basic Law of Governance. Would you like to know more about a specific legislative topic?"
+    if any(w in t for w in ["minute", "session", "meeting", "agenda"]):
+        return "Shura Council session minutes are documented and archived for public reference. You can browse records by session number or date. Is there a specific session you are looking for?"
+    if any(w in t for w in ["royal", "speech", "king", "majesty", "his highness"]):
+        return "Royal Speeches delivered at the opening of Shura Council sessions are archived and available for reference. They outline key national priorities and legislative directives."
+    if any(w in t for w in ["women", "child", "family", "gender"]):
+        return "The Shura Council has passed several landmark pieces of legislation related to women's rights, child protection, and family welfare. Would you like me to retrieve specific references?"
+    if any(w in t for w in ["member", "who", "council", "shura"]):
+        return "The Shura Council consists of appointed members who represent diverse sectors of society. Their role is to advise on legislation, review policies, and represent public interest."
+    if any(w in t for w in ["hello", "hi", "hey", "good morning", "good afternoon", "salam", "السلام"]):
+        return "Hello! Welcome to the Shura Council virtual assistant. I can help you with information on legislation, council sessions, royal speeches, and more. What would you like to know?"
+    return "Thank you for your message. I am here to assist you with information about the Shura Council, legislation, and public services. Could you please clarify your question so I can provide the most relevant information?"
+
+
+# ════════════════════════════════════════════════════════════════════
+# PAGE: CHATBOT DEMO
+# ════════════════════════════════════════════════════════════════════
+if current_page == "Chatbot Demo":
+    st.markdown("""<div class="sec-header"><div class="sec-bar"></div><span class="sec-title">Live Chatbot Simulation</span></div>""", unsafe_allow_html=True)
+    st.markdown("""<p style="color:var(--muted);font-size:0.82rem;margin-bottom:18px">Simulates a public user chatting with Senad (Shura Council AI assistant). The security gateway inspects every message before it reaches the AI. The right panel shows what the security team sees in real time.</p>""", unsafe_allow_html=True)
+
+    chat_col, admin_col = st.columns([1.05, 1], gap="large")
+
+    with chat_col:
+        st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">USER VIEW</div>""", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 28px rgba(0,0,0,0.45);max-width:430px">
+            <div style="background:#8B1A1A;padding:14px 18px;display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:#a52a2a;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🧑‍💼</div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:0.95rem">Senad</div>
+                    <div style="color:#ffcdd2;font-size:0.73rem">Shura Council</div>
+                </div>
+                <div style="margin-left:auto;color:#ffcdd2;font-size:0.7rem">● Online</div>
+            </div>
+            <div style="background:#f4f4f4;padding:14px 14px 8px;min-height:300px;max-height:380px;overflow-y:auto">
+        """, unsafe_allow_html=True)
+
+        for msg in st.session_state.demo_chat:
+            if msg["role"] == "assistant":
+                colour = "#ffebee" if msg["text"].startswith(("⛔", "⚠️")) else "#ffffff"
+                st.markdown(f"""<div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#222;max-width:88%;box-shadow:0 1px 3px rgba(0,0,0,0.1);line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
+            else:
+                st.markdown(f"""<div style="background:#8B1A1A;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg['text']}</div>""", unsafe_allow_html=True)
+
+        st.markdown("""</div></div>""", unsafe_allow_html=True)
+
+        demo_input = st.text_input("", placeholder="Type a message to Senad...", key="demo_input", label_visibility="collapsed")
+        dc1, dc2 = st.columns([3, 1])
+        with dc1:
+            send_clicked = st.button("Send Message", use_container_width=True, key="demo_send")
+        with dc2:
+            if st.button("Clear", use_container_width=True, key="demo_clear"):
+                st.session_state.demo_chat = [{"role": "assistant", "text": "Welcome to the Shura Council website! I'm Senad, your virtual assistant. How can I help you today?"}]
+                st.session_state.demo_last_result = None
+                st.rerun()
+
+        if send_clicked and demo_input.strip():
+            result = inspect_prompt(demo_input)
+            log_event(demo_input, result)
+            st.session_state.session_requests += 1
+            if result.risk_level == "HIGH":
+                st.session_state.session_blocked += 1
+            st.session_state.demo_last_result = result
+            st.session_state.demo_chat.append({"role": "user", "text": demo_input})
+            if result.risk_level == "HIGH":
+                bot_reply = "⛔ Your message has been blocked by our security system. This conversation has been logged and reviewed by the security team."
+            elif result.risk_level == "MEDIUM":
+                bot_reply = "⚠️ Your message has been flagged for security review. A member of our team will follow up with you shortly."
+            else:
+                bot_reply = _senad_response(demo_input)
+            st.session_state.demo_chat.append({"role": "assistant", "text": bot_reply})
+            st.rerun()
+
+    with admin_col:
+        st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">ADMIN / SECURITY TEAM VIEW</div>""", unsafe_allow_html=True)
+        if st.session_state.demo_last_result is None:
+            st.markdown("""
+            <div class="card" style="text-align:center;padding:40px 20px;color:var(--muted);font-size:0.83rem">
+                <div style="font-size:2rem;margin-bottom:12px">🛡️</div>
+                Waiting for incoming message...<br>
+                <span style="font-size:0.75rem">Gateway inspection results will appear here</span>
+            </div>""", unsafe_allow_html=True)
+        else:
+            r = st.session_state.demo_last_result
+            risk_col = {"HIGH": "var(--red)", "MEDIUM": "var(--amber)", "LOW": "var(--green)"}[r.risk_level]
+            decision_col = {"BLOCK": "var(--red)", "FLAG FOR REVIEW": "var(--amber)", "ALLOW": "var(--green)"}[r.action]
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-header"><span class="card-title">Gateway Inspection Result</span></div>
+                <div class="card-body">
+                    <div style="display:flex;gap:12px;margin-bottom:16px">
+                        <div style="flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                            <div style="font-size:0.65rem;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">RISK LEVEL</div>
+                            <div style="font-size:1.5rem;font-weight:800;color:{risk_col};letter-spacing:.06em">{r.risk_level}</div>
+                        </div>
+                        <div style="flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                            <div style="font-size:0.65rem;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">DECISION</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:{decision_col};letter-spacing:.06em">{r.action}</div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px">
+                        <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px">RISK SCORE</div>
+                        <div style="background:var(--panel);border-radius:6px;height:8px;overflow:hidden">
+                            <div style="height:100%;width:{r.score}%;background:{risk_col};border-radius:6px"></div>
+                        </div>
+                        <div style="text-align:right;font-size:0.72rem;color:{risk_col};margin-top:3px">{r.score}/100</div>
+                    </div>
+                    <table style="width:100%;font-size:0.75rem;border-collapse:collapse">
+                        <tr style="border-bottom:1px solid var(--border)"><td style="color:var(--muted);padding:5px 0">Rules matched</td><td style="text-align:right;color:var(--fg)">{len(r.matched_rules)}</td></tr>
+                        <tr style="border-bottom:1px solid var(--border)"><td style="color:var(--muted);padding:5px 0">Tokens scanned</td><td style="text-align:right;color:var(--fg)">{r.tokens_scanned}</td></tr>
+                        <tr><td style="color:var(--muted);padding:5px 0">Length anomaly</td><td style="text-align:right;color:{'var(--amber)' if r.length_anomaly else 'var(--green)'}">{"Yes" if r.length_anomaly else "No"}</td></tr>
+                    </table>
+                    {('<div style="margin-top:12px;font-size:0.72rem;color:var(--muted)">Matched rules:</div><div style="font-size:0.72rem;color:var(--red);margin-top:4px">' + '<br>'.join(f'• {rule}' for rule in r.matched_rules) + '</div>') if r.matched_rules else ''}
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Analysis</span></div>
+                <div class="card-body" style="font-size:0.78rem;color:var(--muted);line-height:1.7">{r.explanation}</div>
+            </div>
+            """, unsafe_allow_html=True)
