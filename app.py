@@ -13,6 +13,10 @@ import re as _re
 import io
 import os
 
+for _secret_key in ["HF_TOKEN", "OPENAI_API_KEY"]:
+    if _secret_key in st.secrets and not os.environ.get(_secret_key):
+        os.environ[_secret_key] = st.secrets[_secret_key]
+
 from engine import inspect_prompt, sanitise_prompt, CUSTOM_PATTERNS, RULE_CONFIDENCE, HIGH_PATTERNS, MEDIUM_PATTERNS
 from database import init_db, log_event, fetch_all_logs, fetch_stats, clear_logs, seed_demo_data, fetch_score_distribution, fetch_rule_breakdown
 
