@@ -555,24 +555,23 @@ def inspect_prompt(prompt: str) -> InspectionResult:
     tokens_scanned = len(normalized.split())
     prompt_length = len(prompt)
 
-    # ── Run both API layers ───────────────────────────────────────────────
+    # ── Run all layers (regex always runs as a baseline) ─────────────────
     hf_score      = _hf_classify(prompt)
     openai_result = _openai_moderate(prompt)
+    regex_result  = _result_from_regex(prompt, normalized, prompt_length, tokens_scanned)
 
-    # ── Both available → combine (worst result wins) ──────────────────────
+    # ── Build candidate list and pick the worst risk ──────────────────────
+    candidates = [regex_result]
+
     if hf_score is not None and openai_result is not None:
-        return _result_from_combined(hf_score, openai_result, prompt, prompt_length, tokens_scanned)
+        candidates.append(_result_from_combined(hf_score, openai_result, prompt, prompt_length, tokens_scanned))
+    elif hf_score is not None:
+        candidates.append(_result_from_hf(hf_score, prompt, prompt_length, tokens_scanned))
+    elif openai_result is not None:
+        candidates.append(_result_from_openai(openai_result, prompt_length, tokens_scanned))
 
-    # ── Only HF available ─────────────────────────────────────────────────
-    if hf_score is not None:
-        return _result_from_hf(hf_score, prompt, prompt_length, tokens_scanned)
-
-    # ── Only OpenAI available ─────────────────────────────────────────────
-    if openai_result is not None:
-        return _result_from_openai(openai_result, prompt_length, tokens_scanned)
-
-    # ── Fallback: weighted regex engine ───────────────────────────────────
-    return _result_from_regex(prompt, normalized, prompt_length, tokens_scanned)
+    # Return the result with the highest risk rank (most conservative)
+    return max(candidates, key=lambda r: (RISK_RANK[r.risk_level], r.score))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
