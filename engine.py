@@ -252,36 +252,42 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
     or None if the API is unreachable or OPENAI_API_KEY is not set.
     """
     try:
-        from openai import OpenAI
+        import urllib.request
+        import json as _json
 
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return None
 
-        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
-        response = client.moderations.create(
-            input=prompt,
-            model="text-moderation-latest",
-        )
-        result = response.results[0]
+        payload = _json.dumps({
+            "input": prompt,
+            "model": "text-moderation-latest",
+        }).encode("utf-8")
 
-        try:
-            scores = result.category_scores.model_dump()
-            categories = result.categories.model_dump()
-        except AttributeError:
-            try:
-                scores = dict(vars(result.category_scores))
-                categories = dict(vars(result.categories))
-            except Exception:
-                scores = {}
-                categories = {}
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/moderations",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=OPENAI_TIMEOUT) as resp:
+            body = _json.loads(resp.read().decode("utf-8"))
+
+        result     = body["results"][0]
+        flagged    = result["flagged"]
+        scores     = result.get("category_scores", {})
+        categories = result.get("categories", {})
 
         flagged_cats = [k for k, v in categories.items() if v]
-        top_cat = max(scores, key=lambda k: scores[k]) if scores else "unknown"
-        max_score = float(scores.get(top_cat, 0))
+        top_cat      = max(scores, key=lambda k: scores[k]) if scores else "unknown"
+        max_score    = float(scores.get(top_cat, 0))
 
         return {
-            "flagged":            result.flagged,
+            "flagged":            flagged,
             "flagged_categories": flagged_cats,
             "max_score":          max_score,
             "top_category":       top_cat,
