@@ -261,7 +261,6 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
 
         payload = _json.dumps({
             "input": prompt,
-            "model": "text-moderation-latest",
         }).encode("utf-8")
 
         req = urllib.request.Request(
@@ -568,7 +567,7 @@ def inspect_prompt(prompt: str) -> InspectionResult:
 
     # ── Run all layers (regex always runs as a baseline) ─────────────────
     hf_score      = _hf_classify(prompt)
-    openai_result = _openai_moderate(prompt)
+    openai_result = None  # OpenAI moderation disabled (free-tier rate limit)
     regex_result  = _result_from_regex(prompt, normalized, prompt_length, tokens_scanned)
 
     # ── Build candidate list and pick the worst risk ──────────────────────
