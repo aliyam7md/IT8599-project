@@ -1701,21 +1701,27 @@ st.markdown("""
 
 
 def _ai_chat_response(history: list) -> str:
-    """Call HuggingFace text generation for a real AI response."""
+    """Call HF Inference REST API (flan-t5-large) for a real AI response."""
     try:
-        from huggingface_hub import InferenceClient
+        import urllib.request as _ur
+        import json as _js
         token = os.environ.get("HF_TOKEN")
         if not token:
             return "I'm sorry, I'm unable to respond right now. Please try again later."
-        client = InferenceClient(provider="hf-inference", api_key=token, timeout=30)
         user_msg = history[-1]["text"] if history else ""
-        prompt = "Answer this question helpfully and concisely: " + user_msg
-        response = client.text2text_generation(
-            prompt,
-            model="google/flan-t5-large",
+        payload = _js.dumps({"inputs": "Answer helpfully and concisely: " + user_msg}).encode()
+        req = _ur.Request(
+            "https://api-inference.huggingface.co/models/google/flan-t5-large",
+            data=payload,
+            headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"},
+            method="POST",
         )
-        answer = response.strip() if isinstance(response, str) else ""
-        return answer if answer else "I'm here to help! Could you please rephrase your question?"
+        with _ur.urlopen(req, timeout=30) as resp:
+            result = _js.loads(resp.read())
+        if isinstance(result, list) and result:
+            answer = result[0].get("generated_text", "").strip()
+            return answer if answer else "I'm here to help! Could you please rephrase your question?"
+        return "I'm here to help! Could you please rephrase your question?"
     except Exception as _e:
         return "[Debug] " + type(_e).__name__ + ": " + str(_e)[:100]
 
