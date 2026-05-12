@@ -1409,7 +1409,7 @@ if current_page == "About":
             <div class="card-header"><span class="card-title">What Is This?</span></div>
             <div class="card-body" style="font-size:0.8rem;line-height:1.9;color:var(--muted)">
                 <strong style="color:var(--fg)">AI Agent Security Gateway</strong> is a cybersecurity
-                middleware prototype developed for the IT8599 postgraduate course. It acts as a
+                middleware prototype developed for the IT8599 bachelor's degree course. It acts as a
                 network-layer security control positioned between external users and a company's
                 public-facing AI agent, inspecting every incoming message before it reaches the AI.
                 <br><br>
