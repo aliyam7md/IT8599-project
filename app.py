@@ -1710,10 +1710,9 @@ def _ai_chat_response(history: list) -> str:
         client = InferenceClient(provider="hf-inference", api_key=token, timeout=30)
         user_msg = history[-1]["text"] if history else ""
         prompt = "Answer this question helpfully and concisely: " + user_msg
-        response = client.text_generation(
+        response = client.text2text_generation(
             prompt,
             model="google/flan-t5-large",
-            max_new_tokens=150,
         )
         answer = response.strip() if isinstance(response, str) else ""
         return answer if answer else "I'm here to help! Could you please rephrase your question?"
