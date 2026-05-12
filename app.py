@@ -1701,39 +1701,27 @@ st.markdown("""
 
 
 def _ai_chat_response(history: list) -> str:
-    """Call HuggingFace chat completion for a real AI response."""
+    """Call HuggingFace text generation for a real AI response."""
     try:
         from huggingface_hub import InferenceClient
         token = os.environ.get("HF_TOKEN")
         if not token:
             return "I'm sorry, I'm unable to respond right now. Please try again later."
         client = InferenceClient(provider="hf-inference", api_key=token, timeout=30)
-        messages = [{"role": "system", "content": (
-            "You are a helpful, friendly AI assistant. Answer the user's questions clearly and concisely. "
-            "Keep responses under 3 sentences unless more detail is genuinely needed."
-        )}]
-        for msg in history:
-            if msg["role"] in ("user", "assistant"):
-                messages.append({"role": msg["role"], "content": msg["text"]})
-        errors = []
-        for model in [
-            "mistralai/Mistral-7B-Instruct-v0.3",
-            "Qwen/Qwen2.5-7B-Instruct",
-            "google/gemma-2-2b-it",
-        ]:
-            try:
-                response = client.chat_completion(
-                    messages=messages,
-                    model=model,
-                    max_tokens=200,
-                )
-                return response.choices[0].message.content.strip()
-            except Exception as _me:
-                errors.append(f"{model.split('/')[-1]}: {str(_me)[:60]}")
-                continue
-        return "[Debug] " + " | ".join(errors)
+        user_msg = history[-1]["text"] if history else ""
+        prompt = "Answer this question helpfully and concisely: " + user_msg
+        response = client.text_generation(
+            prompt,
+            model="google/flan-t5-large",
+            max_new_tokens=150,
+        )
+        answer = response.strip() if isinstance(response, str) else ""
+        return answer if answer else "I'm here to help! Could you please rephrase your question?"
     except Exception as _e:
-        return f"[Debug outer] {type(_e).__name__}: {str(_e)[:100]}"
+        return "[Debug] " + type(_e).__name__ + ": " + str(_e)[:100]
+
+
+
 
 
 # ════════════════════════════════════════════════════════════════════
