@@ -637,7 +637,7 @@ with st.sidebar:
         </div>
         <div class="sb-status-row">
             <span class="sb-status-key">OpenAI Moderation</span>
-            <span style="color:{'#34d399' if os.environ.get('OPENAI_API_KEY') else 'var(--muted)'};font-size:0.72rem;font-weight:600">{'Active' if os.environ.get('OPENAI_API_KEY') else 'No key'}</span>
+            <span style="color:var(--muted);font-size:0.72rem;font-weight:600">Disabled</span>
         </div>
         <div class="sb-status-row">
             <span class="sb-status-key">Database</span>
