@@ -1700,19 +1700,29 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def _senad_response(text: str) -> str:
-    t = text.lower()
-    if any(w in t for w in ["hello", "hi", "hey", "good morning", "good afternoon", "salam"]):
-        return "Hello! How can I assist you today? Feel free to ask me anything."
-    if any(w in t for w in ["help", "support", "assist", "question"]):
-        return "Of course! I'm here to help. Please describe your question or issue and I'll do my best to assist you."
-    if any(w in t for w in ["service", "product", "offer", "information", "info"]):
-        return "We offer a range of services to support our users. Could you let me know what specific information you are looking for?"
-    if any(w in t for w in ["contact", "email", "phone", "reach", "speak"]):
-        return "You can reach our support team through the official contact page. Would you like me to guide you there?"
-    if any(w in t for w in ["thank", "thanks", "appreciate"]):
-        return "You're welcome! Is there anything else I can help you with?"
-    return "Thank you for your message. I'm here to assist you. Could you provide a bit more detail so I can give you the most accurate response?"
+def _ai_chat_response(history: list) -> str:
+    """Call HuggingFace chat completion for a real AI response."""
+    try:
+        from huggingface_hub import InferenceClient
+        token = os.environ.get("HF_TOKEN")
+        if not token:
+            return "I'm sorry, I'm unable to respond right now. Please try again later."
+        client = InferenceClient(provider="hf-inference", api_key=token, timeout=30)
+        messages = [{"role": "system", "content": (
+            "You are a helpful, friendly AI assistant. Answer the user's questions clearly and concisely. "
+            "Keep responses under 3 sentences unless more detail is genuinely needed."
+        )}]
+        for msg in history:
+            if msg["role"] in ("user", "assistant"):
+                messages.append({"role": msg["role"], "content": msg["text"]})
+        response = client.chat_completion(
+            messages=messages,
+            model="HuggingFaceH4/zephyr-7b-beta",
+            max_tokens=200,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return "I'm having trouble responding right now. Please try again in a moment."
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -1720,40 +1730,42 @@ def _senad_response(text: str) -> str:
 # ════════════════════════════════════════════════════════════════════
 if current_page == "Chatbot Demo":
     st.markdown("""<div class="sec-header"><div class="sec-bar"></div><span class="sec-title">Live Chatbot Simulation</span></div>""", unsafe_allow_html=True)
-    st.markdown("""<p style="color:var(--muted);font-size:0.82rem;margin-bottom:18px">Simulates a public user chatting with an AI assistant. The security gateway inspects every message before it reaches the AI. The right panel shows what the security team sees in real time.</p>""", unsafe_allow_html=True)
+    st.markdown("""<p style="color:var(--muted);font-size:0.82rem;margin-bottom:18px">Chat with the AI assistant below. Every message is silently inspected by the security gateway before a response is generated. Try a normal question, then try a prompt injection or harmful message.</p>""", unsafe_allow_html=True)
 
-    chat_col, admin_col = st.columns([1.05, 1], gap="large")
+    _, chat_col, _ = st.columns([1, 2.2, 1])
 
     with chat_col:
-        st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">USER VIEW</div>""", unsafe_allow_html=True)
         msgs_html = ""
         for msg in st.session_state.demo_chat:
             if msg["role"] == "assistant":
                 colour = "#ffebee" if msg["text"].startswith(("⛔", "⚠️")) else "#ffffff"
-                msgs_html += f'<div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#222;max-width:88%;box-shadow:0 1px 3px rgba(0,0,0,0.1);line-height:1.5">{msg["text"]}</div>'
+                msgs_html += f'<div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end"><div style="width:30px;height:30px;border-radius:50%;background:#1a237e;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0">🤖</div><div style="background:{colour};border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:0.83rem;color:#222;max-width:85%;box-shadow:0 1px 4px rgba(0,0,0,0.1);line-height:1.6">{msg["text"]}</div></div>'
             else:
-                msgs_html += f'<div style="background:#1a237e;border-radius:12px 12px 2px 12px;padding:10px 14px;margin-bottom:9px;font-size:0.82rem;color:#fff;max-width:88%;margin-left:auto;text-align:right;line-height:1.5">{msg["text"]}</div>'
+                msgs_html += f'<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><div style="background:#1a237e;border-radius:12px 12px 2px 12px;padding:10px 14px;font-size:0.83rem;color:#fff;max-width:85%;line-height:1.6">{msg["text"]}</div></div>'
 
         st.markdown(f"""
-        <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 28px rgba(0,0,0,0.45);max-width:430px">
+        <div style="border-radius:16px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.5);border:1px solid #1a237e">
             <div style="background:#1a237e;padding:14px 18px;display:flex;align-items:center;gap:12px">
-                <div style="width:44px;height:44px;border-radius:50%;background:#283593;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🤖</div>
+                <div style="width:42px;height:42px;border-radius:50%;background:#283593;display:flex;align-items:center;justify-content:center;font-size:1.25rem">🤖</div>
                 <div>
                     <div style="color:#fff;font-weight:700;font-size:0.95rem">AI Assistant</div>
-                    <div style="color:#c5cae9;font-size:0.73rem">Virtual Support Agent</div>
+                    <div style="color:#c5cae9;font-size:0.72rem">Powered by HuggingFace · Protected by Security Gateway</div>
                 </div>
-                <div style="margin-left:auto;color:#c5cae9;font-size:0.7rem">● Online</div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:5px">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#4caf50"></div>
+                    <span style="color:#c5cae9;font-size:0.7rem">Online</span>
+                </div>
             </div>
-            <div style="background:#f4f4f4;padding:14px 14px 8px;min-height:320px;max-height:420px;overflow-y:auto">
+            <div style="background:#f7f8fc;padding:16px;min-height:360px;max-height:460px;overflow-y:auto">
                 {msgs_html}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         demo_input = st.text_input("", placeholder="Type a message...", key="demo_input", label_visibility="collapsed")
-        dc1, dc2 = st.columns([3, 1])
+        dc1, dc2 = st.columns([4, 1])
         with dc1:
-            send_clicked = st.button("Send Message", use_container_width=True, key="demo_send")
+            send_clicked = st.button("Send", use_container_width=True, key="demo_send")
         with dc2:
             if st.button("Clear", use_container_width=True, key="demo_clear"):
                 st.session_state.demo_chat = [{"role": "assistant", "text": "Hello! I'm your AI assistant. How can I help you today?"}]
@@ -1781,54 +1793,7 @@ if current_page == "Chatbot Demo":
             elif result.risk_level == "MEDIUM":
                 bot_reply = "⚠️ Your message has been flagged for security review. A member of our team will follow up with you shortly."
             else:
-                bot_reply = _senad_response(demo_input)
+                with st.spinner("Thinking..."):
+                    bot_reply = _ai_chat_response(st.session_state.demo_chat)
             st.session_state.demo_chat.append({"role": "assistant", "text": bot_reply})
             st.rerun()
-
-    with admin_col:
-        st.markdown("""<div style="font-size:0.72rem;font-weight:600;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">ADMIN / SECURITY TEAM VIEW</div>""", unsafe_allow_html=True)
-        if st.session_state.demo_last_result is None:
-            st.markdown("""
-            <div class="card" style="text-align:center;padding:40px 20px;color:var(--muted);font-size:0.83rem">
-                <div style="font-size:2rem;margin-bottom:12px">🛡️</div>
-                Waiting for incoming message...<br>
-                <span style="font-size:0.75rem">Gateway inspection results will appear here</span>
-            </div>""", unsafe_allow_html=True)
-        else:
-            r = st.session_state.demo_last_result
-            risk_col = {"HIGH": "var(--red)", "MEDIUM": "var(--amber)", "LOW": "var(--green)"}[r.risk_level]
-            decision_col = {"BLOCK": "var(--red)", "FLAG FOR REVIEW": "var(--amber)", "ALLOW": "var(--green)"}[r.action]
-            st.markdown(f"""
-            <div class="card">
-                <div class="card-header"><span class="card-title">Gateway Inspection Result</span></div>
-                <div class="card-body">
-                    <div style="display:flex;gap:12px;margin-bottom:16px">
-                        <div style="flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-                            <div style="font-size:0.65rem;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">RISK LEVEL</div>
-                            <div style="font-size:1.5rem;font-weight:800;color:{risk_col};letter-spacing:.06em">{r.risk_level}</div>
-                        </div>
-                        <div style="flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
-                            <div style="font-size:0.65rem;color:var(--muted);letter-spacing:.08em;margin-bottom:6px">DECISION</div>
-                            <div style="font-size:1.1rem;font-weight:800;color:{decision_col};letter-spacing:.06em">{r.action}</div>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:12px">
-                        <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px">RISK SCORE</div>
-                        <div style="background:var(--panel);border-radius:6px;height:8px;overflow:hidden">
-                            <div style="height:100%;width:{r.score}%;background:{risk_col};border-radius:6px"></div>
-                        </div>
-                        <div style="text-align:right;font-size:0.72rem;color:{risk_col};margin-top:3px">{r.score}/100</div>
-                    </div>
-                    <table style="width:100%;font-size:0.75rem;border-collapse:collapse">
-                        <tr style="border-bottom:1px solid var(--border)"><td style="color:var(--muted);padding:5px 0">Rules matched</td><td style="text-align:right;color:var(--fg)">{len(r.matched_rules)}</td></tr>
-                        <tr style="border-bottom:1px solid var(--border)"><td style="color:var(--muted);padding:5px 0">Tokens scanned</td><td style="text-align:right;color:var(--fg)">{r.tokens_scanned}</td></tr>
-                        <tr><td style="color:var(--muted);padding:5px 0">Length anomaly</td><td style="text-align:right;color:{'var(--amber)' if r.length_anomaly else 'var(--green)'}">{"Yes" if r.length_anomaly else "No"}</td></tr>
-                    </table>
-                    {('<div style="margin-top:12px;font-size:0.72rem;color:var(--muted)">Matched rules:</div><div style="font-size:0.72rem;color:var(--red);margin-top:4px">' + '<br>'.join(f'• {rule}' for rule in r.matched_rules) + '</div>') if r.matched_rules else ''}
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header"><span class="card-title">Analysis</span></div>
-                <div class="card-body" style="font-size:0.78rem;color:var(--muted);line-height:1.7">{r.explanation}</div>
-            </div>
-            """, unsafe_allow_html=True)
