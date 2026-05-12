@@ -1734,13 +1734,25 @@ def _ai_chat_response(history: list) -> str:
     if _re.search(r"speed of light|how fast is light", msg):
         return "The speed of light in a vacuum is approximately 299,792 kilometres per second (186,282 miles per second), or about 1.08 billion km/h."
 
-    if _re.search(r"capital.*(france|paris)|paris.*capital", msg):
-        return "The capital of France is Paris, one of the world's most visited cities and a major global centre for art, fashion, and culture."
-
+    _capitals = {
+        "japan": "Tokyo", "france": "Paris", "germany": "Berlin",
+        "italy": "Rome", "spain": "Madrid", "china": "Beijing",
+        "usa": "Washington D.C.", "united states": "Washington D.C.",
+        "uk": "London", "united kingdom": "London", "england": "London",
+        "australia": "Canberra", "canada": "Ottawa", "brazil": "Brasília",
+        "india": "New Delhi", "russia": "Moscow", "egypt": "Cairo",
+        "saudi arabia": "Riyadh", "uae": "Abu Dhabi",
+        "united arab emirates": "Abu Dhabi", "turkey": "Ankara",
+        "south korea": "Seoul", "mexico": "Mexico City",
+        "argentina": "Buenos Aires", "south africa": "Pretoria",
+    }
     if _re.search(r"capital of", msg):
-        country = _re.search(r"capital of (.+?)(\?|$)", msg)
-        if country:
-            return f"I can help with capital cities! For the most accurate and up-to-date information on {country.group(1).strip()}, I'd recommend checking a reliable geography source."
+        for country, capital in _capitals.items():
+            if country in msg:
+                return f"The capital of {country.title()} is {capital}."
+        country_match = _re.search(r"capital of (.+?)(\?|$)", msg)
+        if country_match:
+            return f"I don't have that specific capital on hand, but you can quickly look it up on Wikipedia or Google Maps!"
         return "I can help with capital cities! Please specify the country you're asking about."
 
     if _re.search(r"what is ai|what is artificial intelligence|explain ai", msg):
@@ -1775,6 +1787,10 @@ def _ai_chat_response(history: list) -> str:
 
     if _re.search(r"joke|funny|laugh", msg):
         return "Why did the computer go to the doctor? Because it had a virus! 😄 Is there anything else I can help you with?"
+
+    if _re.search(r"(show|give|get|find|access|see|view).*(file|document|folder|data|record).*(not supposed|unauthorized|restricted|private|shouldn't|should not|not allowed|forbidden)", msg) or \
+       _re.search(r"(file|document|data).*(not supposed|unauthorized|restricted|shouldn't).*(see|access|view|read)", msg):
+        return "I'm sorry, I can't help with that request. Accessing files or data without authorisation is not something I'm able to assist with."
 
     if _re.search(r"who (is|was) (the )?(president|prime minister|king|leader|ceo)", msg):
         return "I have knowledge up to my training date and may not have the latest information on current leaders. For the most up-to-date information, I'd recommend checking a reliable news source."

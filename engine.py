@@ -94,6 +94,7 @@ RULE_CONFIDENCE: dict = {
     "Off-record conversation attempt":       ("Medium",   "#f59e0b"),
     "Informal trust manipulation":           ("Low",      "#22c55e"),
     "Social engineering probe":              ("Medium",   "#f59e0b"),
+    "Unauthorized data access request":                      ("High",     "#f97316"),
     "Zero-shot classifier: prompt injection intent detected": ("Critical", "#ef4444"),
     "Zero-shot classifier: security bypass attempt detected": ("High",     "#f97316"),
     "Zero-shot classifier: social engineering detected":      ("High",     "#f97316"),
@@ -153,6 +154,8 @@ MEDIUM_PATTERNS: List[Tuple[str, str]] = [
     (r"\bphish(ing)?\b",                                          "Phishing reference"),
     (r"\bbrute\s*force\b",                                        "Brute force reference"),
     (r"\b(delete|drop|truncate)\s+(table|database|all\s+records)\b", "Destructive data operation"),
+    (r"(show|give|get|find|access|see|view).{0,30}(file|document|folder|data|record).{0,30}(not supposed|unauthorized|restricted|shouldn.t|not allowed|forbidden)", "Unauthorized data access request"),
+    (r"(file|document|data).{0,20}(not supposed|unauthorized|shouldn.t).{0,20}(see|access|view|read)", "Unauthorized data access request"),
 ]
 
 # Weighted scoring — per matched rule (regex fallback only)
