@@ -94,6 +94,10 @@ RULE_CONFIDENCE: dict = {
     "Off-record conversation attempt":       ("Medium",   "#f59e0b"),
     "Informal trust manipulation":           ("Low",      "#22c55e"),
     "Social engineering probe":              ("Medium",   "#f59e0b"),
+    "Zero-shot classifier: prompt injection intent detected": ("Critical", "#ef4444"),
+    "Zero-shot classifier: security bypass attempt detected": ("High",     "#f97316"),
+    "Zero-shot classifier: social engineering detected":      ("High",     "#f97316"),
+    "Zero-shot classifier: harmful or dangerous request detected": ("High", "#f97316"),
     # ── ML classifier rules (primary engine) ──────────────────────────────
     "ML semantic classifier: prompt injection detected": ("Critical", "#ef4444"),
     "ML semantic classifier: suspicious content flagged": ("High",     "#f97316"),
@@ -140,6 +144,15 @@ MEDIUM_PATTERNS: List[Tuple[str, str]] = [
     (r"\boff\s+the\s+record\b",        "Off-record conversation attempt"),
     (r"\bbetween\s+us\b",              "Informal trust manipulation"),
     (r"\btell\s+me\s+a\s+secret\b",    "Social engineering probe"),
+    (r"\baccess\s+(restricted|private|protected|confidential)\b", "Restricted access probe"),
+    (r"\bbypass\s+(auth|login|security|filter|restriction)\b",    "Security bypass attempt"),
+    (r"\bhow\s+to\s+(hack|crack|break\s+into|exploit)\b",         "Exploitation inquiry"),
+    (r"\bgain\s+(unauthorized|admin|root|elevated)\b",            "Privilege escalation probe"),
+    (r"\bexploit\s+(vulnerability|vuln|weakness|flaw)\b",         "Vulnerability exploitation"),
+    (r"\bsocial\s+engineer\b",                                    "Social engineering reference"),
+    (r"\bphish(ing)?\b",                                          "Phishing reference"),
+    (r"\bbrute\s*force\b",                                        "Brute force reference"),
+    (r"\b(delete|drop|truncate)\s+(table|database|all\s+records)\b", "Destructive data operation"),
 ]
 
 # Weighted scoring — per matched rule (regex fallback only)
@@ -295,6 +308,89 @@ def _openai_moderate(prompt: str) -> Optional[dict]:
     except Exception as _e:
         print(f"[OpenAI moderation error] {type(_e).__name__}: {_e}")
         return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LAYER 3 — ZERO-SHOT INTENT CLASSIFIER (facebook/bart-large-mnli)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ZERO_SHOT_LABELS = [
+    "prompt injection attack",
+    "security bypass attempt",
+    "social engineering",
+    "harmful or dangerous request",
+    "normal conversation",
+]
+ZERO_SHOT_TIMEOUT = 10
+
+
+def _zero_shot_classify(prompt: str) -> Optional[dict]:
+    """Zero-shot intent classification via facebook/bart-large-mnli REST API."""
+    try:
+        import urllib.request as _ur
+        import json as _js
+        token = os.environ.get("HF_TOKEN")
+        if not token:
+            return None
+        payload = _js.dumps({
+            "inputs": prompt,
+            "parameters": {"candidate_labels": ZERO_SHOT_LABELS},
+        }).encode()
+        req = _ur.Request(
+            "https://api-inference.huggingface.co/models/facebook/bart-large-mnli",
+            data=payload,
+            headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"},
+            method="POST",
+        )
+        with _ur.urlopen(req, timeout=ZERO_SHOT_TIMEOUT) as resp:
+            body = _js.loads(resp.read())
+        if "labels" not in body or "scores" not in body:
+            return None
+        scores = dict(zip(body["labels"], body["scores"]))
+        top_label = body["labels"][0]
+        top_score = body["scores"][0]
+        return {"top_label": top_label, "top_score": top_score, "scores": scores}
+    except Exception as _e:
+        print(f"[Zero-shot error] {type(_e).__name__}: {_e}")
+        return None
+
+
+def _result_from_zero_shot(
+    zs: dict,
+    prompt_length: int,
+    tokens_scanned: int,
+) -> InspectionResult:
+    """Build an InspectionResult from zero-shot classification output."""
+    label = zs["top_label"]
+    conf  = zs["top_score"]
+    length_anomaly = prompt_length > 500
+
+    if label == "prompt injection attack" and conf >= 0.55:
+        risk          = "HIGH"
+        matched_rules = ["Zero-shot classifier: prompt injection intent detected"]
+        score         = max(60, min(100, int(conf * 100)))
+    elif label in ("security bypass attempt", "social engineering",
+                   "harmful or dangerous request") and conf >= 0.45:
+        risk          = "MEDIUM"
+        matched_rules = [f"Zero-shot classifier: {label} detected"]
+        score         = max(25, min(59, int(conf * 100)))
+    else:
+        risk          = "LOW"
+        matched_rules = []
+        score         = SCORE_MIN_LOW
+
+    action, action_color = DECISION_MAP[risk]
+    explanation = _build_explanation(
+        risk, matched_rules, length_anomaly, prompt_length,
+        method="zero_shot", confidence_pct=score,
+    )
+    return InspectionResult(
+        risk_level=risk, score=score, action=action,
+        action_color=action_color, risk_color=RISK_COLORS[risk],
+        icon=RISK_ICONS[risk], matched_rules=matched_rules,
+        explanation=explanation, tokens_scanned=tokens_scanned,
+        prompt_length=prompt_length, length_anomaly=length_anomaly,
+    )
 
 
 def _result_from_hf(
@@ -568,6 +664,7 @@ def inspect_prompt(prompt: str) -> InspectionResult:
     # ── Run all layers (regex always runs as a baseline) ─────────────────
     hf_score      = _hf_classify(prompt)
     openai_result = None  # OpenAI moderation disabled (free-tier rate limit)
+    zs_result     = _zero_shot_classify(prompt)
     regex_result  = _result_from_regex(prompt, normalized, prompt_length, tokens_scanned)
 
     # ── Build candidate list and pick the worst risk ──────────────────────
@@ -579,6 +676,9 @@ def inspect_prompt(prompt: str) -> InspectionResult:
         candidates.append(_result_from_hf(hf_score, prompt, prompt_length, tokens_scanned))
     elif openai_result is not None:
         candidates.append(_result_from_openai(openai_result, prompt_length, tokens_scanned))
+
+    if zs_result is not None:
+        candidates.append(_result_from_zero_shot(zs_result, prompt_length, tokens_scanned))
 
     # Return the result with the highest risk rank (most conservative)
     return max(candidates, key=lambda r: (RISK_RANK[r.risk_level], r.score))
@@ -681,6 +781,31 @@ def _build_explanation(
                 "Both detection layers (Hugging Face semantic classifier and OpenAI "
                 "moderation) found no threats in this request. The message has been "
                 f"forwarded to the company's AI agent for processing.{length_note}"
+            )
+
+    # ── Zero-shot intent classifier explanations ───────────────────────────
+    if method == "zero_shot":
+        if risk == "HIGH":
+            return (
+                f"A zero-shot intent classifier (facebook/bart-large-mnli) identified this "
+                f"message as a likely prompt injection attack with {confidence_pct}% confidence. "
+                f"The model evaluates the meaning of the message against known threat categories "
+                f"without relying on keyword rules. The gateway has blocked this message."
+                f"{length_note}"
+            )
+        elif risk == "MEDIUM":
+            joined = "; ".join(rules)
+            return (
+                f"A zero-shot intent classifier (facebook/bart-large-mnli) flagged this "
+                f"message as potentially suspicious ({joined}) with {confidence_pct}% confidence. "
+                f"Unlike keyword matching, this model understands the intent behind phrasing. "
+                f"The message has been held for security review.{length_note}"
+            )
+        else:
+            return (
+                f"The zero-shot intent classifier found no threatening intent in this message "
+                f"({confidence_pct}% alignment with normal conversation). The message has been "
+                f"forwarded for processing.{length_note}"
             )
 
     # ── Regex engine explanations (unchanged) ─────────────────────────────
