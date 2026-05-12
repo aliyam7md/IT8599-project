@@ -1715,14 +1715,23 @@ def _ai_chat_response(history: list) -> str:
         for msg in history:
             if msg["role"] in ("user", "assistant"):
                 messages.append({"role": msg["role"], "content": msg["text"]})
-        response = client.chat_completion(
-            messages=messages,
-            model="HuggingFaceH4/zephyr-7b-beta",
-            max_tokens=200,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as _e:
-        return f"[Debug] {type(_e).__name__}: {str(_e)[:120]}"
+        for model in [
+            "mistralai/Mistral-7B-Instruct-v0.3",
+            "Qwen/Qwen2.5-7B-Instruct",
+            "google/gemma-2-2b-it",
+        ]:
+            try:
+                response = client.chat_completion(
+                    messages=messages,
+                    model=model,
+                    max_tokens=200,
+                )
+                return response.choices[0].message.content.strip()
+            except Exception:
+                continue
+        return "I'm having trouble responding right now. Please try again in a moment."
+    except Exception:
+        return "I'm having trouble responding right now. Please try again in a moment."
 
 
 # ════════════════════════════════════════════════════════════════════
