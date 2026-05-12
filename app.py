@@ -1721,8 +1721,8 @@ def _ai_chat_response(history: list) -> str:
             max_tokens=200,
         )
         return response.choices[0].message.content.strip()
-    except Exception:
-        return "I'm having trouble responding right now. Please try again in a moment."
+    except Exception as _e:
+        return f"[Debug] {type(_e).__name__}: {str(_e)[:120]}"
 
 
 # ════════════════════════════════════════════════════════════════════
