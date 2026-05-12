@@ -1701,29 +1701,88 @@ st.markdown("""
 
 
 def _ai_chat_response(history: list) -> str:
-    """Call HF Inference REST API (flan-t5-large) for a real AI response."""
-    try:
-        import urllib.request as _ur
-        import json as _js
-        token = os.environ.get("HF_TOKEN")
-        if not token:
-            return "I'm sorry, I'm unable to respond right now. Please try again later."
-        user_msg = history[-1]["text"] if history else ""
-        payload = _js.dumps({"inputs": "Answer helpfully and concisely: " + user_msg}).encode()
-        req = _ur.Request(
-            "https://api-inference.huggingface.co/models/google/flan-t5-large",
-            data=payload,
-            headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"},
-            method="POST",
-        )
-        with _ur.urlopen(req, timeout=30) as resp:
-            result = _js.loads(resp.read())
-        if isinstance(result, list) and result:
-            answer = result[0].get("generated_text", "").strip()
-            return answer if answer else "I'm here to help! Could you please rephrase your question?"
-        return "I'm here to help! Could you please rephrase your question?"
-    except Exception as _e:
-        return "[Debug] " + type(_e).__name__ + ": " + str(_e)[:100]
+    """Smart response engine for the chatbot demo."""
+    import re as _re
+    msg = history[-1]["text"].lower().strip() if history else ""
+
+    greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "salam", "howdy"]
+    if any(msg == g or msg.startswith(g + " ") or msg.startswith(g + ",") for g in greetings):
+        return "Hello! I'm your AI assistant. How can I help you today? Feel free to ask me anything."
+
+    if _re.search(r"how (are|r) (you|u)", msg):
+        return "I'm doing great, thank you for asking! I'm here and ready to assist you. What can I help you with?"
+
+    if _re.search(r"your name|who are you|what are you", msg):
+        return "I'm an AI assistant designed to help answer your questions and provide information. How can I assist you today?"
+
+    if _re.search(r"thank|thanks|appreciate|thx", msg):
+        return "You're welcome! Is there anything else I can help you with?"
+
+    if _re.search(r"bye|goodbye|see you|cya", msg):
+        return "Goodbye! Have a great day. Feel free to come back if you have more questions!"
+
+    if _re.search(r"(how (big|large|tall|wide|old|far)|size|height|distance|age|population).*(earth|world|planet)", msg) or \
+       _re.search(r"(earth|world|planet).*(big|large|size|old|age|population|distance)", msg):
+        return "The Earth has a diameter of about 12,742 km (7,918 miles), a circumference of roughly 40,075 km, and is approximately 4.5 billion years old. Its total surface area is around 510 million km²."
+
+    if _re.search(r"burj khalifa|tallest building|tallest structure", msg):
+        return "The Burj Khalifa in Dubai, UAE, stands at 828 metres (2,717 feet) tall, making it the world's tallest building. It has 163 floors and was completed in 2010."
+
+    if _re.search(r"eiffel tower", msg):
+        return "The Eiffel Tower in Paris, France, is 330 metres (1,083 feet) tall including its antenna. It was built between 1887 and 1889 and attracts approximately 7 million visitors per year."
+
+    if _re.search(r"speed of light|how fast is light", msg):
+        return "The speed of light in a vacuum is approximately 299,792 kilometres per second (186,282 miles per second), or about 1.08 billion km/h."
+
+    if _re.search(r"capital.*(france|paris)|paris.*capital", msg):
+        return "The capital of France is Paris, one of the world's most visited cities and a major global centre for art, fashion, and culture."
+
+    if _re.search(r"capital of", msg):
+        country = _re.search(r"capital of (.+?)(\?|$)", msg)
+        if country:
+            return f"I can help with capital cities! For the most accurate and up-to-date information on {country.group(1).strip()}, I'd recommend checking a reliable geography source."
+        return "I can help with capital cities! Please specify the country you're asking about."
+
+    if _re.search(r"what is ai|what is artificial intelligence|explain ai", msg):
+        return "Artificial Intelligence (AI) refers to computer systems that can perform tasks that typically require human intelligence, such as understanding language, recognising images, and making decisions. It includes machine learning, natural language processing, and neural networks."
+
+    if _re.search(r"what is (machine learning|ml)\b", msg):
+        return "Machine learning is a branch of AI where systems learn patterns from data to make predictions or decisions without being explicitly programmed for each task. It powers recommendation systems, image recognition, and more."
+
+    if _re.search(r"what is (a |the )?internet", msg):
+        return "The Internet is a global network of interconnected computers and devices that allows people to share information and communicate. It was developed in the 1960s and became publicly accessible in the early 1990s."
+
+    if _re.search(r"weather|temperature|forecast|rain|sunny", msg):
+        return "I don't have access to real-time weather data, but you can check the current weather on services like weather.com, Google Weather, or your local weather app."
+
+    if _re.search(r"time|date|today|current (date|time)", msg):
+        return "I don't have access to real-time data, so I can't tell you the exact current time or date. You can check the clock on your device for the most accurate information!"
+
+    if _re.search(r"\d+\s*[\+\-\*\/]\s*\d+", msg):
+        try:
+            safe = _re.sub(r"[^0-9\+\-\*\/\(\)\. ]", "", msg)
+            tokens = safe.strip().split()
+            expr = next((t for t in tokens if _re.match(r"^[\d\+\-\*\/\(\)\.]+$", t) and len(t) > 1), None)
+            if expr:
+                result = eval(expr)  # noqa: S307
+                return f"The answer is {result}."
+        except Exception:
+            pass
+        return "I can help with basic calculations! Please write your expression clearly, for example: 25 + 17."
+
+    if _re.search(r"help|what can you do|what do you know|capabilities", msg):
+        return "I can answer general knowledge questions, explain concepts, help with calculations, and have conversations on many topics. Just ask me anything!"
+
+    if _re.search(r"joke|funny|laugh", msg):
+        return "Why did the computer go to the doctor? Because it had a virus! 😄 Is there anything else I can help you with?"
+
+    if _re.search(r"who (is|was) (the )?(president|prime minister|king|leader|ceo)", msg):
+        return "I have knowledge up to my training date and may not have the latest information on current leaders. For the most up-to-date information, I'd recommend checking a reliable news source."
+
+    if len(msg.split()) <= 2:
+        return "Could you provide a bit more detail? I want to make sure I give you the most helpful response possible!"
+
+    return "That's an interesting question! I'm here to help with general knowledge, explanations, calculations, and more. Could you rephrase or provide more detail so I can give you the best answer?"
 
 
 
@@ -1797,7 +1856,6 @@ if current_page == "Chatbot Demo":
             elif result.risk_level == "MEDIUM":
                 bot_reply = "⚠️ Your message has been flagged for security review. A member of our team will follow up with you shortly."
             else:
-                with st.spinner("Thinking..."):
-                    bot_reply = _ai_chat_response(st.session_state.demo_chat)
+                bot_reply = _ai_chat_response(st.session_state.demo_chat)
             st.session_state.demo_chat.append({"role": "assistant", "text": bot_reply})
             st.rerun()
