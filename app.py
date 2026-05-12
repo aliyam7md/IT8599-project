@@ -1854,7 +1854,8 @@ if current_page == "Chatbot Demo":
             if result.risk_level == "HIGH":
                 bot_reply = "⛔ Your message has been blocked by our security system. This conversation has been logged and reviewed by the security team."
             elif result.risk_level == "MEDIUM":
-                bot_reply = "⚠️ Your message has been flagged for security review. A member of our team will follow up with you shortly."
+                normal_reply = _ai_chat_response(st.session_state.demo_chat)
+                bot_reply = "⚠️ Note: Your message was flagged for security review and has been logged. I'll still do my best to help — " + normal_reply[0].lower() + normal_reply[1:]
             else:
                 bot_reply = _ai_chat_response(st.session_state.demo_chat)
             st.session_state.demo_chat.append({"role": "assistant", "text": bot_reply})
