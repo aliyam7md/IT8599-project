@@ -170,7 +170,7 @@ SCORE_MIN_LOW    = 10
 # Decision map (shared by both engines)
 DECISION_MAP = {
     "LOW":    ("ALLOW",  "#22c55e"),
-    "MEDIUM": ("FLAG",   "#f59e0b"),
+    "MEDIUM": ("FLAG FOR REVIEW", "#f59e0b"),
     "HIGH":   ("BLOCK",  "#ef4444"),
 }
 
