@@ -1715,6 +1715,7 @@ def _ai_chat_response(history: list) -> str:
         for msg in history:
             if msg["role"] in ("user", "assistant"):
                 messages.append({"role": msg["role"], "content": msg["text"]})
+        errors = []
         for model in [
             "mistralai/Mistral-7B-Instruct-v0.3",
             "Qwen/Qwen2.5-7B-Instruct",
@@ -1727,11 +1728,12 @@ def _ai_chat_response(history: list) -> str:
                     max_tokens=200,
                 )
                 return response.choices[0].message.content.strip()
-            except Exception:
+            except Exception as _me:
+                errors.append(f"{model.split('/')[-1]}: {str(_me)[:60]}")
                 continue
-        return "I'm having trouble responding right now. Please try again in a moment."
-    except Exception:
-        return "I'm having trouble responding right now. Please try again in a moment."
+        return "[Debug] " + " | ".join(errors)
+    except Exception as _e:
+        return f"[Debug outer] {type(_e).__name__}: {str(_e)[:100]}"
 
 
 # ════════════════════════════════════════════════════════════════════
