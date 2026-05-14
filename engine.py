@@ -64,6 +64,7 @@ RULE_CONFIDENCE: dict = {
     # ── Regex rules (fallback engine) ─────────────────────────────────────
     "Instruction override attempt detected": ("Critical", "#ef4444"),
     "Bypass directive detected":             ("Critical", "#ef4444"),
+    "Bypass directive (educational framing)": ("Medium",  "#f59e0b"),
     "Override command detected":             ("Critical", "#ef4444"),
     "Sensitive data extraction attempt":     ("Critical", "#ef4444"),
     "Credential-related keyword":            ("High",     "#f97316"),
@@ -585,6 +586,20 @@ def _result_from_regex(
         length_score_bonus = SCORE_LENGTH_ALERT
     elif prompt_length > 500:
         length_score_bonus = SCORE_LENGTH_WARN
+
+    # If the prompt is clearly framed as educational/hypothetical, soften the
+    # generic HIGH 'bypass' directive to MEDIUM so that such prompts are warned
+    # but not blocked outright.
+    educational_framing = bool(
+        re.search(r"\b(hypothetically|for\s+educational\s+purposes|in\s+theory)\b", normalized)
+    )
+    if educational_framing and "Bypass directive detected" in matched_high:
+        try:
+            matched_high.remove("Bypass directive detected")
+        except ValueError:
+            pass
+        if "Bypass directive (educational framing)" not in matched_medium:
+            matched_medium.append("Bypass directive (educational framing)")
 
     raw_score = (
         len(matched_high)   * SCORE_PER_HIGH +
