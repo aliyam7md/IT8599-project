@@ -1319,8 +1319,7 @@ if current_page == "Pattern Editor":
                     entry = {"pattern": new_pattern.strip(), "reason": new_reason.strip(), "tier": new_tier}
                     st.session_state.custom_patterns.append(entry)
                     _engine.CUSTOM_PATTERNS.append((new_pattern.strip(), new_reason.strip(), new_tier))
-                    st.success(f"Rule added: {new_reason.strip()}")
-                    st.rerun()
+                    st.success(f"✓ Rule added: {new_reason.strip()}")
                 except _re.error as e:
                     st.error(f"Invalid regex: {e}")
             else:
